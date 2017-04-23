@@ -12,12 +12,19 @@ from lxml import etree
 
 
 def getfreqwords(indir, outfile, break_condition):
+    """    
+    :param indir: directory that contains the SAC-Xmls
+    :param outfile: file to write in the most frequent sentences
+    :param break_condition: (conditional) number of sentences to process
+    :return: None
+    """
     do_break = False
     try:
         do_break = type(int(break_condition)) is int
     except TypeError:
         pass
     break_counter = 0
+
     # we save the hash/string pairs in a file so we don't keep all the strings in memory
     tmp_file_hash_plus_string = 'TMP_hash_plus_string.txt'
     # dict contains the hashes of all sentences and the number of occurences
@@ -25,16 +32,17 @@ def getfreqwords(indir, outfile, break_condition):
 
     with open(tmp_file_hash_plus_string, 'wb') as tmp_file:
         tmp_file.write(b'<?xml version="1.0" encoding="UTF-8"?><root>')
-        # pattern get all relevant files as a list
+        # pattern to get all relevant files as a list
         pattern = indir + '/SAC-Jahrbuch_[0-9][0-9][0-9][0-9]_mul.xml'
 
         try:
             for file in glob.glob(pattern):
                 tree = etree.parse(file)
+                # this xpath gets all sentence-elements
                 sentences = tree.xpath('/book/article/div/s')
 
                 for sentence in sentences:
-                    __hash_sentence(sentence, sentence_hashes, tmp_file)
+                    hash_count_sentence(sentence, sentence_hashes, tmp_file)
                     if do_break:
                         break_counter += 1
                         if break_counter > int(break_condition):
@@ -44,12 +52,12 @@ def getfreqwords(indir, outfile, break_condition):
             pass
         tmp_file.write(b'</root>')
 
-
-    # sort the hashes by occurence (e.g. value)
     count = 0
     with open(outfile, 'w', encoding="utf-8") as result_file:
+        # parse the temp file to find the most frequent strings by hash
         hashed_sentences = etree.parse(tmp_file_hash_plus_string)
 
+        # sort the hashes by occurence (e.g. value)
         for hash_sentence in sorted(sentence_hashes.items(), key=operator.itemgetter(1), reverse=True):
             count += 1
             if count > 20:
@@ -65,7 +73,13 @@ def getfreqwords(indir, outfile, break_condition):
         os.remove(tmp_file_hash_plus_string)
 
 
-def __hash_sentence(sentence, sentence_hashes, tmp_file):
+def hash_count_sentence(sentence, sentence_hashes, tmp_file):
+    """ 
+    :param sentence: XML element representing a sentence
+    :param sentence_hashes: dict that contains key-value-pairs with the hash of a sentence and the number of occurencies
+    :param tmp_file: File to write in the sentence with the respective hash
+    :return: None
+    """
     # only sentences with minimum 6 tokens are relevant
     if len(sentence.xpath('w/@lemma')) >= 6:
         # concatenate the lemmata of the sentence and then return the hash value
@@ -82,6 +96,9 @@ def __hash_sentence(sentence, sentence_hashes, tmp_file):
 
 
 class BreakCondition(Exception):
+    """
+    Helper exception, used to jump out of multiple loops
+    """
     pass
 
 
