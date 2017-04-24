@@ -39,9 +39,23 @@ def write_to_line(file_path, n, string):
     move(abs_path, file_path)
 
 def write_to_newline(file_path, string):
-    file = open(file_path, 'w')
+    file = open(file_path, 'a')
     file.write(string + "\n")
     file.close()
+
+
+def clear_all(elem):
+    """
+    Clears an element and all empty references, adapted from source:
+    Source: https://www.ibm.com/developerworks/xml/library/x-hiperfparse/
+    """
+    elem.clear()  # discard the element
+
+    # Also eliminate now-empty references from the root node to elem
+    for ancestor in elem.xpath('ancestor-or-self::*'):
+        while ancestor.getprevious() is not None:
+            del ancestor.getparent()[0]
+
 
 def gettitles(infile_path, testfile_path, trainfile_path, k):
     """
@@ -66,7 +80,7 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
     for event, elem in islice(titles, k):
         write_to_newline(testfile_path, elem.text)
         i += 1
-        elem.clear()  # discard the element
+        clear_all(elem)
 
 
     # For the remaining elements, randomly replace an element of the testfile
@@ -79,9 +93,7 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
         else:
             write_to_newline(trainfile_path, elem.text)
         i += 1
-        elem.clear()  # discard the element
-
-
+        clear_all(elem)
 
 def main():
     # Get the input and output filenames as well as sample size from commandline
