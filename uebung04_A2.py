@@ -38,6 +38,7 @@ def write_to_line(file_path, n, string):
     #Move new file
     move(abs_path, file_path)
 
+
 def write_to_newline(file_path, string):
     file = open(file_path, 'a')
     file.write(string + "\n")
@@ -95,12 +96,13 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
         i += 1
         clear_all(elem)
 
+
 def main():
     # Get the input and output filenames as well as sample size from commandline
-    parser = argparse.ArgumentParser(description='Find most frequent sentences.')
+    parser = argparse.ArgumentParser(description='Choose k random titles from dump')
     parser.add_argument('--infile', '-i',
                         dest='infile',
-                        help='directory that contains the XML files')
+                        help='input xml file')
 
     parser.add_argument('--testfile', '-o',
                         dest="testfile",
