@@ -1,0 +1,5 @@
+Reflexion:
+Wir haben den Nutzen von Iterators beim Memorymanagement kennengelernt, da so nicht alle Element im Memory gehalten werden müssen. Zudem zeigte sich der Vorteil von Hashing für platzsparende Keys in einem Dictionary. Durch die Versionierung mit git konnten Arbeitsvorschritte einfach im Zweierteam geteilt werden.
+
+Zeitaufwand:
+Die ganze Übung benötigte einen Zeitaufwand von 12 Stunden.
