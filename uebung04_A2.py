@@ -47,6 +47,7 @@ class BufferedFileWriter:
                     else:
                         new_file.write(s + "\n")
                     i += 1
+                    del s
 
         close(fh)
         # Remove original file
@@ -60,9 +61,10 @@ def clear_all(elem):
     Clears an element and all empty references, adapted from source:
     Source: https://www.ibm.com/developerworks/xml/library/x-hiperfparse/
     """
+    # It's safe to call clear() here because no descendants will be accessed
     elem.clear()
 
-    # Also eliminate now-empty references from the root node to elem
+    # Also eliminate now-empty references from the root node to our element
     for ancestor in elem.xpath('ancestor-or-self::*'):
         while ancestor.getprevious() is not None:
             del ancestor.getparent()[0]
@@ -78,19 +80,16 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
             ACM Transactions on Mathematical Software.
     """
 
-    context = etree.iterparse(infile_path)
-
-    # We are only interested in elements that have the title tag.
-    titles = filter(lambda tuple: tuple[1].tag == '{http://www.mediawiki.org/xml/export-0.10/}title', context)
+    context = etree.iterparse(infile_path, events=('end',), tag='{http://www.mediawiki.org/xml/export-0.10/}title')
 
     # For extremely large k, the list of random titles will get huge, so we write them to
     # A file as soon as we exceed a certain memory limit.
-    writer = BufferedFileWriter(testfile_path, 100000, k)
+    writer = BufferedFileWriter(testfile_path, 1000000, k)
 
     # The first k title elements are initially added to the list of random titles.
     # We discard the elements as soon as they were processed to reduce memory usage.
     i = 0
-    for event, elem in islice(titles, k):
+    for event, elem in islice(context, k):
         writer.add(i,elem.text)
         i += 1
         clear_all(elem)
@@ -100,7 +99,7 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
     # For the remaining elements, randomly replace an element of the testfile
     # with decreasing probability. If no element is replaced, the title is written
     # to the trainfile.
-    for event, elem in titles:
+    for event, elem in context:
         j = random.randint(0, i)
         if j < k:
             writer.add(j, elem.text)
