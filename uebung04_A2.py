@@ -29,8 +29,8 @@ class BufferedFileWriter:
 
     def add(self, index, string):
         self.buffer[index] = string
-        lol = sys.getsizeof(self.buffer)
-        if len(self.buffer) > self.max_buffer_size:
+
+        if sys.getsizeof(self.buffer) > self.max_buffer_size:
             self.writebuffer()
 
     def writebuffer(self):
@@ -47,7 +47,6 @@ class BufferedFileWriter:
                     else:
                         new_file.write(s + "\n")
                     i += 1
-                    del s
 
         close(fh)
         # Remove original file
@@ -83,8 +82,8 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
     context = etree.iterparse(infile_path, events=('end',), tag='{http://www.mediawiki.org/xml/export-0.10/}title')
 
     # For extremely large k, the list of random titles will get huge, so we write them to
-    # A file as soon as we exceed a certain memory limit.
-    writer = BufferedFileWriter(testfile_path, 1000000, k)
+    # the testfile file as soon as the list gets to big. (>4GB)
+    writer = BufferedFileWriter(testfile_path, 4294967296, k)
 
     # The first k title elements are initially added to the list of random titles.
     # We discard the elements as soon as they were processed to reduce memory usage.
