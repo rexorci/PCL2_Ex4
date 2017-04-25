@@ -8,35 +8,51 @@ import argparse
 import random
 
 from itertools import islice
+
+import sys
 from lxml import etree
 from tempfile import mkstemp
 from shutil import move
 from os import remove, close
 
 
-def write_to_line(file_path, n, string):
-    """
-    Writes to a specific line of a file.
-    Source:
-    http://stackoverflow.com/questions/39086/search-and-replace-a-line-in-a-file-in-python
-    """
+class BufferedFileWriter:
 
-    #Create temp file
-    fh, abs_path = mkstemp()
-    with open(abs_path,'w') as new_file:
-        with open(file_path) as old_file:
-            i = 0
-            for line in old_file:
-                if i == n:
-                    new_file.write(string+"\n")
-                else:
-                    new_file.write(line)
-                i += 1
-    close(fh)
-    #Remove original file
-    remove(file_path)
-    #Move new file
-    move(abs_path, file_path)
+    def __init__(self, file_path, max_buffer_size, k):
+        self.file_path = file_path
+        self.max_buffer_size = max_buffer_size
+        self.buffer = dict()
+        file = open(self.file_path, 'a')
+        for i in range(0,k):
+            file.write("\n")
+        file.close()
+
+    def add(self, index, string):
+        self.buffer[index] = string
+        lol = sys.getsizeof(self.buffer)
+        if len(self.buffer) > self.max_buffer_size:
+            self.writebuffer()
+
+    def writebuffer(self):
+
+        # Create temp file
+        fh, abs_path = mkstemp()
+        with open(abs_path, 'w') as new_file:
+            with open(self.file_path) as old_file:
+                i = 0
+                for line in old_file:
+                    s = self.buffer.pop(i, None)
+                    if s is None:
+                        new_file.write(line)
+                    else:
+                        new_file.write(s + "\n")
+                    i += 1
+
+        close(fh)
+        # Remove original file
+        remove(self.file_path)
+        # Move new file
+        move(abs_path, self.file_path)
 
 
 def clear_all(elem):
@@ -44,7 +60,7 @@ def clear_all(elem):
     Clears an element and all empty references, adapted from source:
     Source: https://www.ibm.com/developerworks/xml/library/x-hiperfparse/
     """
-    elem.clear()  # discard the element
+    elem.clear()
 
     # Also eliminate now-empty references from the root node to elem
     for ancestor in elem.xpath('ancestor-or-self::*'):
@@ -62,39 +78,40 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
             ACM Transactions on Mathematical Software.
     """
 
+    context = etree.iterparse(infile_path)
+
     # We are only interested in elements that have the title tag.
-    titles = filter(
-        lambda tuple: tuple[1].tag == '{http://www.mediawiki.org/xml/export-0.10/}title',
-        etree.iterparse(infile_path))
+    titles = filter(lambda tuple: tuple[1].tag == '{http://www.mediawiki.org/xml/export-0.10/}title', context)
 
+    # For extremely large k, the list of random titles will get huge, so we write them to
+    # A file as soon as we exceed a certain memory limit.
+    writer = BufferedFileWriter(testfile_path, 100000, k)
 
-    # The first k title elements are initially written to the testfile.
+    # The first k title elements are initially added to the list of random titles.
     # We discard the elements as soon as they were processed to reduce memory usage.
-    testfile = open(testfile_path, 'a')
-
     i = 0
     for event, elem in islice(titles, k):
-        testfile.write(elem.text + "\n")
+        writer.add(i,elem.text)
         i += 1
         clear_all(elem)
 
-    testfile.close()
+    trainfile = open(trainfile_path,'a')
 
     # For the remaining elements, randomly replace an element of the testfile
     # with decreasing probability. If no element is replaced, the title is written
     # to the trainfile.
-    trainfile = open(trainfile_path,'a')
-
-    for event, elem in islice(titles, k+1, None):
+    for event, elem in titles:
         j = random.randint(0, i)
         if j < k:
-            write_to_line(testfile_path, j, elem.text)
+            writer.add(j, elem.text)
         else:
-            trainfile.write(elem.text + "\n")
+            trainfile.write(elem.text)
         i += 1
         clear_all(elem)
 
     trainfile.close()
+
+    writer.writebuffer()
 
 def main():
     # Get the input and output filenames as well as sample size from commandline
