@@ -101,6 +101,7 @@ def gettitles(infile_path, testfile_path, trainfile_path, k):
     for event, elem in context:
         j = random.randint(0, i)
         if j < k:
+            trainfile.write(writer.buffer.get(i))
             writer.add(j, elem.text)
         else:
             trainfile.write(elem.text)
